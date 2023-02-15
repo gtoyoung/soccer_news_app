@@ -41,6 +41,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.17.0"
+  cp949:
+    dependency: "direct main"
+    description:
+      name: cp949
+      sha256: "699a487ab0824bd86420887cd805225b3fade70e8fb487d787e90cc872c9c007"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.1"
   cupertino_icons:
     dependency: "direct main"
     description:

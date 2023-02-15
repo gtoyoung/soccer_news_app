@@ -19,7 +19,7 @@ class ApiService {
     final response = await http.get(url);
 
     if (response.statusCode == 200) {
-      final dynamic contents = jsonDecode(response.body);
+      final dynamic contents = jsonDecode(utf8.decode(response.bodyBytes));
       final List<dynamic> newsList = contents["content"];
       for (var news in newsList) {
         final trg = SoccerNewsModel.fromJson(news);
