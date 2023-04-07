@@ -1,6 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:soccer_news_app/model/soccer_news_model.dart';
 import 'package:soccer_news_app/services/api_service.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:soccer_news_app/widget/detail_page.dart';
 
 class HeroListPage extends StatefulWidget {
   const HeroListPage({Key? key}) : super(key: key);
@@ -10,70 +15,186 @@ class HeroListPage extends StatefulWidget {
 }
 
 class _HeroListPageState extends State<HeroListPage> {
-  late Future<List<SoccerNewsModel>> newsList;
+  late bool _isLastPage;
+  late int _pageNumber;
+  late String _date;
+  late String _search;
+  late bool _error;
+  late bool _loading;
+  late List<SoccerNewsModel> resultList;
+  final int numberOfNewsPerRequest = 10;
+  final int _nextPageTrigger = 3;
 
   @override
   void initState() {
     super.initState();
-    newsList = ApiService.getSoccerNewsList("1", "20230215", "", "10");
+    _pageNumber = 1;
+    _date = '';
+    _search = '';
+    _isLastPage = false;
+    _loading = true;
+    _error = false;
+    resultList = [];
+
+    fetchData();
+  }
+
+  Future<void> fetchData() async {
+    try {
+      ApiService.getSoccerNewsList(
+              _pageNumber, _date, _search, numberOfNewsPerRequest)
+          .then((value) {
+        setState(() {
+          _isLastPage = value.length < numberOfNewsPerRequest;
+          _loading = false;
+          _pageNumber = _pageNumber + 1;
+          resultList.addAll(value);
+        });
+      });
+    } catch (e) {
+      print("error --> $e");
+      setState(() {
+        _loading = false;
+        _error = true;
+      });
+    }
+  }
+
+  Widget errorDialog({required double size}) {
+    return SizedBox(
+      height: 180,
+      width: 200,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'An error occurred when fetching the posts.',
+            style: TextStyle(
+                fontSize: size,
+                fontWeight: FontWeight.w500,
+                color: Colors.black),
+          ),
+          const SizedBox(
+            height: 10,
+          ),
+          TextButton(
+              onPressed: () {
+                setState(() {
+                  _loading = true;
+                  _error = false;
+                  fetchData();
+                });
+              },
+              child: const Text(
+                "Retry",
+                style: TextStyle(fontSize: 20, color: Colors.purpleAccent),
+              )),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
-          return <Widget>[
-            SliverAppBar(
-              expandedHeight: 300.0,
-              floating: false,
-              pinned: true,
-              stretch: true,
-              flexibleSpace: FlexibleSpaceBar(
-                  centerTitle: true,
-                  collapseMode: CollapseMode.parallax,
-                  title: const Text("해축 News",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16.0,
-                      )),
-                  background: Image.network(
-                    "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
-                    fit: BoxFit.cover,
-                  )),
-            ),
-          ];
-        },
-        body: Center(
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: FutureBuilder(
-              future: newsList,
-              builder: (context, snapshot) {
-                if (snapshot.hasData) {
-                  return makeList(
-                      snapshot as AsyncSnapshot<List<SoccerNewsModel>>);
-                }
-                return const CircularProgressIndicator();
-              },
-            ),
+      body: buildNewsView(),
+    );
+  }
+
+  Widget buildNewsView() {
+    if (resultList.isEmpty) {
+      if (_loading) {
+        return const Center(
+          child: Padding(
+            padding: EdgeInsets.all(8),
+            child: CircularProgressIndicator(),
           ),
-        ),
+        );
+      } else if (_error) {
+        return Center(
+          child: errorDialog(size: 20),
+        );
+      }
+    }
+    return NestedScrollView(
+      headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
+        return <Widget>[
+          SliverAppBar(
+            expandedHeight: 300.0,
+            floating: true,
+            pinned: false,
+            stretch: true,
+            flexibleSpace: FlexibleSpaceBar(
+                centerTitle: true,
+                collapseMode: CollapseMode.pin,
+                title: const Text("해축 News",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16.0,
+                    )),
+                background: Image.network(
+                  "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+                  fit: BoxFit.cover,
+                )),
+            backgroundColor: Colors.grey.withOpacity(0.5),
+          ),
+        ];
+      },
+      body: Center(
+        child: Container(
+            constraints: const BoxConstraints(maxWidth: 500),
+            child: makeList()),
       ),
     );
   }
 
-  ListView makeList(AsyncSnapshot<List<SoccerNewsModel>> snapshot) {
+  ListView makeList() {
     return ListView.builder(
-      itemCount: snapshot.data!.length,
+      itemCount: resultList.length + (_isLastPage ? 0 : 1),
       itemBuilder: (BuildContext context, int index) {
+        if (index == resultList.length - _nextPageTrigger) {
+          fetchData();
+        }
+
+        if (index == resultList.length) {
+          if (_error) {
+            return Center(
+              child: errorDialog(size: 15),
+            );
+          } else {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(8),
+                child: CircularProgressIndicator(),
+              ),
+            );
+          }
+        }
         return InkWell(
           onTap: () {
-            Navigator.of(context).push(MaterialPageRoute(
-                builder: (context) => SecondPage(
-                      heroTag: index,
-                      model: snapshot.data![index],
-                    )));
+            showModalBottomSheet(
+              context: context,
+              builder: (BuildContext build) {
+                return DetailView(
+                  heroTag: index,
+                  model: resultList[index],
+                );
+              },
+            );
+          },
+          onLongPress: () => {
+            showDialog(
+                context: context,
+                builder: (BuildContext build) {
+                  return InAppWebView(
+                    initialUrlRequest: URLRequest(
+                      url: Uri.parse(resultList[index].link),
+                    ),
+                    initialOptions: InAppWebViewGroupOptions(
+                        android: AndroidInAppWebViewOptions(
+                            useHybridComposition: true)),
+                  );
+                })
           },
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -83,16 +204,21 @@ class _HeroListPageState extends State<HeroListPage> {
                   tag: index,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      snapshot.data![index].thumbnail,
-                      width: 200,
+                    child: CachedNetworkImage(
+                      imageUrl: resultList[index].thumbnail.isEmpty
+                          ? "https://cdn-icons-png.flaticon.com/128/9718/9718823.png"
+                          : resultList[index].thumbnail,
+                      placeholder: (context, url) =>
+                          const CircularProgressIndicator(),
+                      errorWidget: (context, url, error) =>
+                          const Icon(Icons.error),
                     ),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                     child: Text(
-                  snapshot.data![index].title,
+                  resultList[index].title,
                   style: Theme.of(context).textTheme.titleLarge,
                 )),
               ],
@@ -103,54 +229,3 @@ class _HeroListPageState extends State<HeroListPage> {
     );
   }
 }
-
-class SecondPage extends StatelessWidget {
-  final int heroTag;
-  final SoccerNewsModel model;
-  const SecondPage({Key? key, required this.heroTag, required this.model})
-      : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text("Hero ListView Page 2")),
-      body: Column(
-        children: [
-          Expanded(
-            child: Center(
-              child: Hero(
-                tag: heroTag,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(8),
-                  clipBehavior: Clip.hardEdge,
-                  child: Image.network(
-                    "${model.thumbnail}?type=w647",
-                    fit: BoxFit.cover,
-                    height: double.infinity,
-                    width: double.infinity,
-                    alignment: Alignment.center,
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              model.subContent,
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-          )
-        ],
-      ),
-    );
-  }
-}
-
-final List<String> _images = [
-  'https://images.pexels.com/photos/167699/pexels-photo-167699.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260',
-  'https://images.pexels.com/photos/2662116/pexels-photo-2662116.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-  'https://images.pexels.com/photos/273935/pexels-photo-273935.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-  'https://images.pexels.com/photos/1591373/pexels-photo-1591373.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-  'https://images.pexels.com/photos/462024/pexels-photo-462024.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500',
-  'https://images.pexels.com/photos/325185/pexels-photo-325185.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500'
-];

@@ -7,12 +7,13 @@ class ApiService {
   static const baseUrl = "http://api.dovb.kro.kr/newsList";
 
   static Future<List<SoccerNewsModel>> getSoccerNewsList(
-      String page, String date, String search, String size) async {
+      int page, String date, String search, int size) async {
     List<SoccerNewsModel> newsInstances = [];
 
     String targetUrl = baseUrl +
-        "?date=$date&page=$page" +
-        "&size=${size.isEmpty ? "10" : size}" +
+        "?page=$page" +
+        "&size=${size.isNaN ? "10" : size}" +
+        (date.isEmpty ? "" : "&date=$date") +
         (search.isNotEmpty ? "&search=$search" : "");
 
     final url = Uri.parse(targetUrl);
@@ -21,8 +22,9 @@ class ApiService {
     if (response.statusCode == 200) {
       final dynamic contents = jsonDecode(utf8.decode(response.bodyBytes));
       final List<dynamic> newsList = contents["content"];
+      final int totalPages = contents["totalPages"];
       for (var news in newsList) {
-        final trg = SoccerNewsModel.fromJson(news);
+        final trg = SoccerNewsModel.fromJson(news, totalPages);
         newsInstances.add(trg);
       }
 

@@ -6,17 +6,21 @@ class SoccerNewsModel {
       subContent,
       thumbnail,
       datetime,
-      sectionName;
+      sectionName,
+      link;
+  final int totalPages;
   final List<dynamic> words;
 
-  SoccerNewsModel.fromJson(Map<String, dynamic> json)
+  SoccerNewsModel.fromJson(Map<String, dynamic> json, int pages)
       : oid = json["oid"],
         aid = json["aid"],
         officeName = json["officeName"],
         title = json["title"],
         subContent = json["subContent"],
-        thumbnail = json["thumbnail"],
+        thumbnail = json["thumbnail"] ?? "",
         datetime = json["datetime"],
         sectionName = json["sectionName"],
-        words = json["words"];
+        link = json["link"],
+        words = json["words"],
+        totalPages = pages;
 }
