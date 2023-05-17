@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:soccer_news_app/model/soccer_news_model.dart';
@@ -21,6 +22,7 @@ class _HeroListPageState extends State<HeroListPage> {
   late String _search;
   late bool _error;
   late bool _loading;
+  late bool _isSearch;
   late List<SoccerNewsModel> resultList;
   final int numberOfNewsPerRequest = 10;
   final int _nextPageTrigger = 3;
@@ -35,11 +37,22 @@ class _HeroListPageState extends State<HeroListPage> {
     _loading = true;
     _error = false;
     resultList = [];
-
+    _isSearch = false;
     fetchData();
   }
 
   Future<void> fetchData() async {
+    if (_isSearch) {
+      setState(() {
+        _pageNumber = 1;
+        _date = '';
+        _isLastPage = false;
+        _loading = true;
+        _error = false;
+        resultList = [];
+        _isSearch = false;
+      });
+    }
     try {
       ApiService.getSoccerNewsList(
               _pageNumber, _date, _search, numberOfNewsPerRequest)
@@ -52,7 +65,6 @@ class _HeroListPageState extends State<HeroListPage> {
         });
       });
     } catch (e) {
-      print("error --> $e");
       setState(() {
         _loading = false;
         _error = true;
@@ -120,31 +132,83 @@ class _HeroListPageState extends State<HeroListPage> {
       headerSliverBuilder: (BuildContext context, bool innerBoxIsScrolled) {
         return <Widget>[
           SliverAppBar(
-            expandedHeight: 300.0,
+            expandedHeight: 200.0,
             floating: true,
             pinned: false,
             stretch: true,
             flexibleSpace: FlexibleSpaceBar(
-                centerTitle: true,
-                collapseMode: CollapseMode.pin,
-                title: const Text("해축 News",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16.0,
-                    )),
-                background: Image.network(
-                  "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
-                  fit: BoxFit.cover,
-                )),
+              centerTitle: true,
+              collapseMode: CollapseMode.pin,
+              title: const Text("해축 News",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16.0,
+                  )),
+              background: Image.network(
+                "https://images.pexels.com/photos/417173/pexels-photo-417173.jpeg?auto=compress&cs=tinysrgb&dpr=2&h=750&w=1260",
+                fit: BoxFit.cover,
+              ),
+            ),
             backgroundColor: Colors.grey.withOpacity(0.5),
           ),
+          SliverPadding(
+            padding: const EdgeInsets.all(16.0),
+            sliver:
+                SliverList(delegate: SliverChildListDelegate([searchBox()])),
+          )
         ];
       },
-      body: Center(
-        child: Container(
-            constraints: const BoxConstraints(maxWidth: 500),
-            child: makeList()),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          _isSearch = true;
+          await fetchData();
+        },
+        child: Center(
+          child: Container(
+              constraints: const BoxConstraints(maxWidth: 500),
+              child: makeList()),
+        ),
       ),
+    );
+  }
+
+  Column searchBox() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 6.0, 16.0, 16.0),
+          child: SizedBox(
+            height: 36.0,
+            width: double.infinity,
+            child: CupertinoTextField(
+              keyboardType: TextInputType.text,
+              placeholder: '기사를 검색해보세요.',
+              placeholderStyle: const TextStyle(
+                color: Color(0xffC4C6CC),
+                fontSize: 14.0,
+                fontFamily: 'Brutal',
+              ),
+              prefix: const Padding(
+                padding: EdgeInsets.fromLTRB(9.0, 6.0, 9.0, 6.0),
+                child: Icon(
+                  Icons.search,
+                  color: Color(0xffC4C6CC),
+                ),
+              ),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(8.0),
+                color: const Color(0xffF0F1F5),
+              ),
+              onSubmitted: (value) async {
+                _search = value;
+                _isSearch = true;
+                await fetchData();
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
