@@ -4,7 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:soccer_news_app/model/soccer_news_model.dart';
 
 class ApiService {
-  static const baseUrl = "http://api.dovb.kro.kr/newsList";
+  static const baseUrl = "https://api.dovb.kro.kr/newsList";
 
   static Future<List<SoccerNewsModel>> getSoccerNewsList(
       int page, String date, String search, int size) async {

@@ -30,7 +30,7 @@ class _HeroListPageState extends State<HeroListPage> {
   @override
   void initState() {
     super.initState();
-    _pageNumber = 1;
+    _pageNumber = 0;
     _date = '';
     _search = '';
     _isLastPage = false;
@@ -44,7 +44,7 @@ class _HeroListPageState extends State<HeroListPage> {
   Future<void> fetchData() async {
     if (_isSearch) {
       setState(() {
-        _pageNumber = 1;
+        _pageNumber = 0;
         _date = '';
         _isLastPage = false;
         _loading = true;
@@ -268,15 +268,27 @@ class _HeroListPageState extends State<HeroListPage> {
                   tag: index,
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(8),
-                    child: CachedNetworkImage(
-                      imageUrl: resultList[index].thumbnail.isEmpty
-                          ? "https://cdn-icons-png.flaticon.com/128/9718/9718823.png"
-                          : resultList[index].thumbnail,
-                      placeholder: (context, url) =>
-                          const CircularProgressIndicator(),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.error),
-                    ),
+                    child: resultList[index].thumbnail.isEmpty
+                        ? SizedBox(
+                            width: 150.0,
+                            height: 150.0,
+                            child: CachedNetworkImage(
+                              imageUrl:
+                                  "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ac/No_image_available.svg/300px-No_image_available.svg.png",
+                              placeholder: (context, url) =>
+                                  const CircularProgressIndicator(),
+                              errorWidget: (context, url, error) =>
+                                  const Icon(Icons.error),
+                            ),
+                          )
+                        : CachedNetworkImage(
+                            imageUrl:
+                                "https://dovb-img-proxy.vercel.app/soccerProxy?url=${resultList[index].thumbnail}",
+                            placeholder: (context, url) =>
+                                const CircularProgressIndicator(),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.error),
+                          ),
                   ),
                 ),
                 const SizedBox(width: 10),
